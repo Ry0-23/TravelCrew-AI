@@ -4,5 +4,3 @@ __pycache__/
 *.pyc
 *.pyo
 *.log
-*.pem
-setup-aws.ps1
