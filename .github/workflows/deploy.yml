@@ -1,0 +1,71 @@
+name: Build and Deploy TravelCrew-AI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/travelcrew-ai
+
+jobs:
+  # ─────────────────────────────
+  # JOB 1: Build & Push to Docker Hub
+  # ─────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.ref == 'refs/heads/main' }}   # only push on main, not PRs
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────
+  # JOB 2: Deploy to EC2 (Phase 3 — wired up later)
+  # ─────────────────────────────
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ env.IMAGE_NAME }}:latest
+            docker stop travelcrew || true
+            docker rm travelcrew || true
+            docker run -d \
+              --name travelcrew \
+              --restart unless-stopped \
+              -p 8501:8501 \
+              -e GROQ_API_KEY=${{ secrets.GROQ_API_KEY }} \
+              -e SERPER_API_KEY=${{ secrets.SERPER_API_KEY }} \
+              -e OPENAI_API_KEY=dummy \
+              ${{ env.IMAGE_NAME }}:latest

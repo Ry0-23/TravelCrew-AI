@@ -1,0 +1,27 @@
+# Secrets — never bake into image
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Git
+.git/
+.gitignore
+
+# Project docs (not needed at runtime)
+HLD/
+LLD/
+FINAL REPORT/
+*.md
+
+# Local virtual envs
+venv/
+env/
+.venv/
+
+# ChromaDB local data (managed via volume, not baked in)
+chroma_db/
