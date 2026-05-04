@@ -71,5 +71,6 @@ jobs:
             sudo docker run -d \
               --name travelcrew-app \
               -p 8501:8501 \
+              --env-file /home/ubuntu/.env \
               --restart unless-stopped \
               ${{ secrets.AWS_ECR_URI }}:latest
